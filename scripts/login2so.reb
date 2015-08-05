@@ -9,9 +9,9 @@ Rebol [
 	}
 ]
 
-sx-email: stackexchange-email@somewhere.com  ; email!
-sx-password: "-- password ---" ; string!
-chat-page: http://chat.stackoverflow.com/rooms/291/rebol-and-red ; url!
+sx-email: ""  ; email!
+sx-password: "" ; string!
+chat-page: http://chat.stackoverflow.com/rooms/77702/a-room-for-harold-and-maude ; SO chat room
 
 ; load modified http protocol to return the info object on failed http redirect
 print "loading modified prot-http.r3"
@@ -33,9 +33,10 @@ login2so: func [email [email!] password [string!] chat-page [url!]
 		if error? err: try [
 			result: to-string write join root action postdata
 		][
-			cookiejar: reform err/arg2/headers/set-cookie
-			parse cookiejar [ to "usr=" copy cookiejar to ";" ]
-			result: write chat-page compose/deep [GET [cookie: (cookiejar)]]
+                        cookiejar: reform collect [ foreach cookie err/arg2/headers/set-cookie [ keep first split cookie " " ] ] ; trim the expires and domain parts
+			result: write chat-page compose/deep [HEADERS GET [Cookie: (cookiejar) ] ]
+                        append cookiejar reform collect [ foreach cookie result/spec/debug/headers/set-cookie [ keep first split cookie " " ] ] ; we now have the chatusr cookie as well
+                        result: result/data
 			result: reverse decode 'markup result
 			; now grab the new fkey for the chat pages
 			foreach tag result [
@@ -60,5 +61,3 @@ print "reading ..."
 result: login2so sx-email sx-password chat-page
 
 ?? result
-write clipboard:// mold result
-halt
